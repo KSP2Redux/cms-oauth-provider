@@ -33,6 +33,8 @@ Use `compose.yml` as a Git-backed Portainer stack. Define these stack environmen
 - `DECAP_GITHUB_CLIENT_ID`
 - `DECAP_GITHUB_CLIENT_SECRET`
 - `DECAP_OAUTH_STATE_SECRET`
+- `DECAP_REDIRECT_URL` — the complete OAuth callback URL, including `/callback`
+- `DECAP_ALLOWED_ORIGINS` — comma-separated exact HTTPS origins allowed to receive the result
 
 Generate the state secret with a cryptographically secure generator, for example:
 
@@ -42,10 +44,15 @@ openssl rand -base64 48
 
 The stack joins the existing external `caddy_net` network. The corresponding Caddy upstream will be `cms-oauth:3000`.
 
-The checked-in deployment settings expect:
+For example, an OAuth service at `https://cms-auth.example.com` serving a CMS at
+`https://cms.example.com` would use:
 
-- CMS origin: `https://ksp2redux.github.io`
-- OAuth host: `https://decap-auth.rendezvous.dev`
-- GitHub callback URL: `https://decap-auth.rendezvous.dev/callback`
+```ini
+DECAP_REDIRECT_URL=https://cms-auth.example.com/callback
+DECAP_ALLOWED_ORIGINS=https://cms.example.com
+```
+
+`DECAP_REDIRECT_URL` must exactly match the callback URL registered in the
+GitHub OAuth App. Origins must not contain a path or trailing slash.
 
 Do not commit client secrets or the state secret.
