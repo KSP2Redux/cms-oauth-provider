@@ -27,6 +27,10 @@ The service exposes:
 - `GET /callback` as the GitHub OAuth callback
 - `GET /healthz` for container health checks
 
+At startup, the service logs its package version and configured GitHub
+organization. This makes it easy to confirm a successful rebuild in Portainer's
+container log view.
+
 ## Portainer deployment
 
 Use `compose.yml` as a Git-backed Portainer stack. Define these stack environment variables in Portainer:
@@ -45,6 +49,9 @@ openssl rand -base64 48
 ```
 
 The stack joins the existing external `caddy_net` network. The corresponding Caddy upstream will be `cms-oauth:3000`.
+The Compose service uses `pull_policy: build`, which tells Docker Compose to
+rebuild the local image during a stack redeployment even if an older image is
+already present.
 
 For example, an OAuth service at `https://cms-auth.example.com` serving a CMS at
 `https://cms.example.com` would use:
