@@ -15,7 +15,8 @@ services:
       OAUTH_STATE_SECRET: ${DECAP_OAUTH_STATE_SECRET:?DECAP_OAUTH_STATE_SECRET is required}
       REDIRECT_URL: ${DECAP_REDIRECT_URL:?DECAP_REDIRECT_URL is required}
       ORIGINS: ${DECAP_ALLOWED_ORIGINS:?DECAP_ALLOWED_ORIGINS is required}
-      SCOPES: public_repo,read:user
+      GITHUB_ALLOWED_ORGANIZATION: ${DECAP_GITHUB_ALLOWED_ORGANIZATION:?DECAP_GITHUB_ALLOWED_ORGANIZATION is required}
+      SCOPES: public_repo,read:user,read:org
     networks:
       - caddy_net
     security_opt:

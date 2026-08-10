@@ -7,6 +7,7 @@ A small OAuth bridge that lets Decap CMS commit to GitHub repositories. This for
 - Generates and validates a signed, short-lived OAuth `state` value.
 - Uses secure, HTTP-only, same-site cookies.
 - Sends the authorization result only to exact HTTPS origins in `ORIGINS`.
+- Returns a token only for active members of the configured GitHub organization.
 - Does not return provider error details or secrets to the browser.
 - Runs as a non-root user in a read-only container with Linux capabilities removed.
 
@@ -35,6 +36,7 @@ Use `compose.yml` as a Git-backed Portainer stack. Define these stack environmen
 - `DECAP_OAUTH_STATE_SECRET`
 - `DECAP_REDIRECT_URL` — the complete OAuth callback URL, including `/callback`
 - `DECAP_ALLOWED_ORIGINS` — comma-separated exact HTTPS origins allowed to receive the result
+- `DECAP_GITHUB_ALLOWED_ORGANIZATION` — GitHub organization whose active members may log in
 
 Generate the state secret with a cryptographically secure generator, for example:
 
@@ -50,9 +52,13 @@ For example, an OAuth service at `https://cms-auth.example.com` serving a CMS at
 ```ini
 DECAP_REDIRECT_URL=https://cms-auth.example.com/callback
 DECAP_ALLOWED_ORIGINS=https://cms.example.com
+DECAP_GITHUB_ALLOWED_ORGANIZATION=example-organization
 ```
 
 `DECAP_REDIRECT_URL` must exactly match the callback URL registered in the
 GitHub OAuth App. Origins must not contain a path or trailing slash.
+The provider requests GitHub's read-only `read:org` scope so private as well as
+public organization memberships can be checked. Pending members and outside
+collaborators are denied.
 
 Do not commit client secrets or the state secret.

@@ -11,7 +11,7 @@ ENV PORT=3000
 WORKDIR /app
 
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
-COPY --chown=node:node package*.json app.js index.js auth.js callback.js login_script.js state.js ./
+COPY --chown=node:node package*.json app.js index.js auth.js callback.js github.js login_script.js state.js ./
 
 USER node
 EXPOSE 3000

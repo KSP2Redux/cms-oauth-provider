@@ -4,6 +4,7 @@ const express = require('express')
 const { AuthorizationCode } = require('simple-oauth2')
 const createAuthMiddleware = require('./auth')
 const createCallbackMiddleware = require('./callback')
+const { verifyOrganizationMembership } = require('./github')
 
 function requireValue (env, name) {
   const value = env[name]?.trim()
@@ -40,6 +41,16 @@ function loadConfig (env) {
   const parsedRedirect = new URL(redirectUrl)
   if (parsedRedirect.protocol !== 'https:') throw new Error('REDIRECT_URL must use HTTPS')
 
+  const allowedOrganization = requireValue(env, 'GITHUB_ALLOWED_ORGANIZATION')
+  if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(allowedOrganization)) {
+    throw new Error('GITHUB_ALLOWED_ORGANIZATION must be a valid GitHub organization name')
+  }
+
+  const scopes = (env.SCOPES || 'public_repo,read:user,read:org').split(',').map(scope => scope.trim()).filter(Boolean)
+  if (!scopes.includes('read:org')) {
+    throw new Error('SCOPES must include read:org when organization access is restricted')
+  }
+
   return {
     port: Number.parseInt(env.PORT || '3000', 10),
     provider: env.OAUTH_PROVIDER?.trim() || 'github',
@@ -48,7 +59,8 @@ function loadConfig (env) {
     stateSecret,
     redirectUrl,
     origins: parseOrigins(requireValue(env, 'ORIGINS')),
-    scopes: (env.SCOPES || 'public_repo,read:user').split(',').map(scope => scope.trim()).filter(Boolean),
+    allowedOrganization,
+    scopes,
     tokenHost: env.GIT_HOSTNAME?.trim() || 'https://github.com',
     tokenPath: env.OAUTH_TOKEN_PATH?.trim() || '/login/oauth/access_token',
     authorizePath: env.OAUTH_AUTHORIZE_PATH?.trim() || '/login/oauth/authorize'
@@ -69,6 +81,7 @@ function createOAuthClient (config) {
 function createApp (config, dependencies = {}) {
   const app = express()
   const oauth2 = dependencies.oauth2 || createOAuthClient(config)
+  const verifyMembership = dependencies.verifyMembership || verifyOrganizationMembership
 
   app.disable('x-powered-by')
   app.use((req, res, next) => {
@@ -82,7 +95,7 @@ function createApp (config, dependencies = {}) {
   })
 
   app.get('/auth', createAuthMiddleware(oauth2, config))
-  app.get('/callback', createCallbackMiddleware(oauth2, config))
+  app.get('/callback', createCallbackMiddleware(oauth2, config, verifyMembership))
   app.get('/healthz', (req, res) => res.status(200).type('text/plain').send('ok'))
   app.get('/', (req, res) => res.type('text/plain').send('Decap CMS OAuth provider'))
 

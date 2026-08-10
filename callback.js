@@ -3,7 +3,7 @@
 const generateLoginPage = require('./login_script')
 const { clearStateCookie, verifyStateCookie } = require('./state')
 
-module.exports = (oauth2, config) => async (req, res) => {
+module.exports = (oauth2, config, verifyMembership) => async (req, res) => {
   res.setHeader('Set-Cookie', clearStateCookie())
 
   if (!req.query.code || !req.query.state || !verifyStateCookie(req, req.query.state, config.stateSecret)) {
@@ -17,6 +17,16 @@ module.exports = (oauth2, config) => async (req, res) => {
     })
     const accessToken = tokenResult.token?.access_token
     if (!accessToken) throw new Error('OAuth provider returned no access token')
+
+    const isMember = await verifyMembership(accessToken, config.allowedOrganization)
+    if (!isMember) {
+      return res.status(403).type('html').send(generateLoginPage({
+        provider: config.provider,
+        status: 'error',
+        content: { message: `Access is limited to active ${config.allowedOrganization} organization members` },
+        origins: config.origins
+      }))
+    }
 
     return res.type('html').send(generateLoginPage({
       provider: config.provider,
