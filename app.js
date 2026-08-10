@@ -1,20 +1,25 @@
-require('dotenv').config({ silent: true })
-const express = require('express')
-const middleWarez = require('./index.js')
-const port = process.env.PORT || 3000
+'use strict'
 
-const app = express()
+require('dotenv').config()
 
-// Initial page redirecting to Github
-app.get('/auth', middleWarez.auth)
+const { createApp, loadConfig } = require('./index')
 
-// Callback service parsing the authorization token
-// and asking for the access token
-app.get('/callback', middleWarez.callback)
+function start () {
+  const config = loadConfig(process.env)
+  const app = createApp(config)
 
-app.get('/success', middleWarez.success)
-app.get('/', middleWarez.index)
+  app.listen(config.port, '0.0.0.0', () => {
+    console.log(`Decap CMS OAuth provider listening on port ${config.port}`)
+  })
+}
 
-app.listen(port, () => {
-  console.log("Netlify CMS OAuth provider listening on port " + port)
-})
+if (require.main === module) {
+  try {
+    start()
+  } catch (error) {
+    console.error(error.message)
+    process.exitCode = 1
+  }
+}
+
+module.exports = { start }

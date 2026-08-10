@@ -1,36 +1,36 @@
-const generateScript = require('./login_script.js')
+'use strict'
 
-module.exports = (oauth2, oauthProvider) => {
-  function callbackMiddleWare (req, res, next) {
-    const code = req.query.code
-    var options = {
-      code: code
-    }
+const generateLoginPage = require('./login_script')
+const { clearStateCookie, verifyStateCookie } = require('./state')
 
-    if (oauthProvider === 'gitlab') {
-      options.client_id = process.env.OAUTH_CLIENT_ID
-      options.client_secret = process.env.OAUTH_CLIENT_SECRET
-      options.grant_type = 'authorization_code'
-      options.redirect_uri = process.env.REDIRECT_URL
-    }
+module.exports = (oauth2, config) => async (req, res) => {
+  res.setHeader('Set-Cookie', clearStateCookie())
 
-    oauth2.getToken(options)
-      .then(result => {
-        const token = oauth2.createToken(result)
-        content = {
-          token: token.token.token.access_token,
-          provider: oauthProvider
-        }
-        return { message: 'success', content }
-      })
-      .catch(error => {
-        console.error('Access Token Error', error.message)
-        return { message: 'error', content: JSON.stringify(error) }
-      })
-      .then(result => {
-        const script = generateScript(oauthProvider, result.message, result.content)
-        return res.send(script)
-      })
+  if (!req.query.code || !req.query.state || !verifyStateCookie(req, req.query.state, config.stateSecret)) {
+    return res.status(400).type('text/plain').send('Invalid OAuth callback state')
   }
-  return callbackMiddleWare
+
+  try {
+    const tokenResult = await oauth2.getToken({
+      code: req.query.code,
+      redirect_uri: config.redirectUrl
+    })
+    const accessToken = tokenResult.token?.access_token
+    if (!accessToken) throw new Error('OAuth provider returned no access token')
+
+    return res.type('html').send(generateLoginPage({
+      provider: config.provider,
+      status: 'success',
+      content: { token: accessToken, provider: config.provider },
+      origins: config.origins
+    }))
+  } catch (error) {
+    console.error(`OAuth token exchange failed: ${error.message}`)
+    return res.status(502).type('html').send(generateLoginPage({
+      provider: config.provider,
+      status: 'error',
+      content: { message: 'OAuth token exchange failed' },
+      origins: config.origins
+    }))
+  }
 }

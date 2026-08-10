@@ -1,47 +1,38 @@
-const REQUIRED_ORIGIN_PATTERN = 
-  /^((\*|([\w_-]{2,}))\.)*(([\w_-]{2,})\.)+(\w{2,})(\,((\*|([\w_-]{2,}))\.)*(([\w_-]{2,})\.)+(\w{2,}))*$/
+'use strict'
 
-if (!process.env.ORIGINS.match(REQUIRED_ORIGIN_PATTERN)) {
-  throw new Error('process.env.ORIGINS MUST be comma separated list \
-    of origins that login can succeed on.')
+function safeJson (value) {
+  return JSON.stringify(value).replaceAll('<', '\\u003c')
 }
-const origins = process.env.ORIGINS.split(',')
 
-
-module.exports = (oauthProvider, message, content) => `
+module.exports = ({ provider, status, content, origins }) => {
+  const message = `authorization:${provider}:${status}:${JSON.stringify(content)}`
+  return `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Decap CMS authorization</title></head>
+<body>
+<p>Completing authorization…</p>
 <script>
-(function() {
-  function contains(arr, elem) {
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i].indexOf('*') >= 0) {
-        const regex = new RegExp(arr[i].replaceAll('.', '\\\\.').replaceAll('*', '[\\\\w_-]+'))
-        console.log(regex)
-        if (elem.match(regex) !== null) {
-          return true;
-        }
-      } else {
-        if (arr[i] === elem) {
-          return true;
-        }
-      }
-    }
-    return false;
+(() => {
+  'use strict'
+  const allowedOrigins = ${safeJson(origins)}
+  const resultMessage = ${safeJson(message)}
+  const provider = ${safeJson(provider)}
+
+  if (!window.opener) {
+    document.body.textContent = 'The authorization window could not reach its opener.'
+    return
   }
-  function recieveMessage(e) {
-    console.log("recieveMessage %o", e)
-    if (!contains(${JSON.stringify(origins)}, e.origin.replace('https://', 'http://').replace('http://', ''))) {
-      console.log('Invalid origin: %s', e.origin);
-      return;
-    }
-    // send message to main window with da app
-    window.opener.postMessage(
-      'authorization:${oauthProvider}:${message}:${JSON.stringify(content)}',
-      e.origin
-    )
+
+  window.addEventListener('message', event => {
+    if (!allowedOrigins.includes(event.origin) || event.source !== window.opener) return
+    window.opener.postMessage(resultMessage, event.origin)
+  })
+
+  for (const origin of allowedOrigins) {
+    window.opener.postMessage('authorizing:' + provider, origin)
   }
-  window.addEventListener("message", recieveMessage, false)
-  // Start handshare with parent
-  console.log("Sending message: %o", "${oauthProvider}")
-  window.opener.postMessage("authorizing:${oauthProvider}", "*")
 })()
-</script>`
+</script>
+</body>
+</html>`
+}

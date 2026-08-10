@@ -1,28 +1,26 @@
 {
-  "name": "netlify-cms-github-oauth-provider",
-  "version": "1.1.0",
+  "name": "@ksp2redux/cms-oauth-provider",
+  "version": "2.0.0",
+  "private": true,
   "engines": {
-    "node": ">=7.x"
+    "node": ">=22"
   },
-  "description": "netlify oauth github client sending token in form as netlify service itself",
-  "repository": "https://github.com/vencax/netlify-cms-github-oauth-provider",
+  "description": "A small GitHub OAuth bridge for Decap CMS",
+  "repository": "https://github.com/KSP2Redux/cms-oauth-provider",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
-    "startdbg": "node --inspect-brk app.js"
+    "test": "node --test"
   },
   "keywords": [
-    "netlify",
-    "cms",
-    "auth"
+    "decap-cms",
+    "github",
+    "oauth"
   ],
-  "author": "Vaclav Klecanda <vencax77@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16",
-    "express": "^4.15.2",
-    "randomstring": "^1.2",
-    "simple-oauth2": "^5"
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "simple-oauth2": "^5.1.0"
   }
 }

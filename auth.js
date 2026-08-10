@@ -1,14 +1,17 @@
-const randomstring = require('randomstring')
+'use strict'
 
-module.exports = (oauth2) => {
-  // Authorization uri definition
-  const authorizationUri = oauth2.authorizeURL({
-    redirectURI: process.env.REDIRECT_URL,
-    scope: process.env.SCOPES || 'repo,user',
-    state: randomstring.generate(32)
-  })
+const { createState, serializeStateCookie } = require('./state')
 
-  return (req, res, next) => {
-    res.redirect(authorizationUri)
+module.exports = (oauth2, config) => (req, res) => {
+  if (req.query.provider && req.query.provider !== config.provider) {
+    return res.status(400).type('text/plain').send('Unsupported OAuth provider')
   }
+
+  const state = createState()
+  res.setHeader('Set-Cookie', serializeStateCookie(state, config.stateSecret))
+  res.redirect(oauth2.authorizeURL({
+    redirect_uri: config.redirectUrl,
+    scope: config.scopes,
+    state
+  }))
 }
